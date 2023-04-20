@@ -5,50 +5,182 @@ from aiogram.dispatcher.filters import Text
 from googleapiclient.discovery import build
 import datetime as dt
 from constants import credentials, SAMPLE_SPREADSHEET_ID, SAMPLE_RANGE_NAME
+from constants import start_list, wtd, kinds
+from definitions import check, add_line
 
-bot = Bot(token='5521890501:AAGzDfRXbsHxgQGeJhVcRJWXmSLstwNxD9c')
+
+bot = Bot(token='6012637787:AAE66KEJm5p1KnOAAt4v5pBbFjfDpmrmYs0')
 dp = Dispatcher(bot)
-start_list = ('65', '50', '43', '38', '33', '24', '100', '120',
-              '18', '14', '11', '75', '70', '80', '140', '8',
-              'кост', 'кост ту', 'бгш27', 'бгш24', 'бгш22',
-              'бгш18', 'клсб', 'клгол', 'пк', 'зксб', 'зкгол',
-              'Г27', 'Г24', 'Г22', 'ш2х', 'ш27', 'ш24',
-              'ш22', 'шзк', 'втзк', 'угон65', 'угон50', 'угон43',
-              'шур4', 'шур6', '1р65', '2р65', '1р50', '1р43',
-              '1р24', '1р18', 'рс3', 'рс4', 'рс5', 'рс6', 'д65',
-              'кд65', 'сд65', 'ск65', 'кб65', 'д50', 'кд50',
-              'сд50', 'ск50', 'кб50', 'д43', 'д24', '328',
-              '143', '74', '366', '362', '487', '153',
-              'клем', 'моно', 'подклем', 'уголок', 'регул',
-              'прокладка204', 'крепеж', 'анкер', 'клемма',
-              'упорметалл', 'прокладкаупруг', 'скоба', 'шурупЦП54',
-              'упорпласт', 'комплектметалл', 'комплектпласт',
-              'Мподкладка', 'Дерево1тип', 'Дерево2тип', 'Ш1',
-              'Ш3', 'Ш3д', 'шпАРС', 'БрусБ3', 'БрусА4',
-              'Ш1 в сборе', 'Ш3 в сборе', 'Ш3д в сборе',
-              'шпАРС в сборе', 'прокладка638', 'б27', 'б24',
-              'б22', 'б18', 'бг27', 'бг24', 'бг22', 'бг18',
-              'дер полушп1', 'дер полушп2', 'кшд23', '2р50',
-              'S49', '50острЛотП', '50острПотП', '50острЛотЛ',
-              '50острПотП', '65острЛотП', '65острПотП', '65острЛотЛ',
-              '65острПотЛ', '50рамаЛотП', '50рамаПотП',
-              '50рамаЛотЛ', '50рамаПотЛ', '65рамаЛотП', '65рамаПотП',
-              '65рамаЛотЛ', '65рамаПотЛ', '50крест9', '50крест11',
-              '50крест7', '50крест4', '65крест9', '65крест11',
-              'FosslohSKL12-32', 'метро''50контр9лев', '50контр9прав',
-              '50контр11лев', '50контр11прав', '65контр9лев',
-              '65контр9прав', '65контр11лев', '65контр11прав',
-              '50СП9лев', '50СП9прав', '50СП11лев', '50СП11прав',
-              '65СП9лев', '65СП9прав', '65СП11лев', '65СП11прав',
-              'СП50рубки9', 'СП50рубки11', 'СП65рубки9', 'СП65рубки11',
-              'СП659рубка7994', 'СП659рубка7433', 'СП659рубка7373',
-              'СП659рубка6027', 'СП659рубка5912', 'Флюгарка', 'Б24*90',
-              'Б24*100', 'Б24*110', 'Б24*120', 'Г24опи',
-              'Ш24гровОПИ', 'БСР10*100', 'БСР12*110', 'БСР16*150',
-              'БСР20*200', 'БСР22*250', 'БСР24*300', 'ХомутПоворот',
-              'ХомутПоворот', 'ХомутБалке', 'ХомутФикс',
-              'ХомутСтыкНаружн', 'ХомутСоедУсил', 'ХомутСоед', 'ХомутДоске')
 final_data = ''
-wtd = {'check': 'Просмотреть наличие',
-       'incoming': 'Отметить приход',
-       'outgo': 'Отметить расход'}
+
+
+@dp.message_handler(commands=['start', 'help'])
+async def start_command(message: types.Message):
+    keyboard_markup = types.InlineKeyboardMarkup(row_width=3)
+    but_check = types.InlineKeyboardButton(text='Просмотреть наличие', callback_data='check')
+    but_incoming = types.InlineKeyboardButton(text='Отметить приход', callback_data='incoming')
+    but_outgo = types.InlineKeyboardButton(text='Отметить расход', callback_data='outgo')
+    keyboard_markup.add(but_check)
+    keyboard_markup.add(but_incoming)
+    keyboard_markup.add(but_outgo)
+    await message.answer('Здравствуйте!\nЧто вы хотите сделать?',
+                         reply_markup=keyboard_markup)
+
+
+@dp.callback_query_handler(text=['check', 'incoming', 'outgo'])
+async def inline_kb_answer_callback_handler(query: types.CallbackQuery):
+    typs = ['рельсы', 'метизы', 'накладки', 'подкладки', 'РТИ', 'АРС', 'ЖБР',
+            'шпала', 'стрелки', 'клеммы прочие', 'хомуты к лесам']
+    answer_data = query.data
+    cb = '_' + answer_data
+    keyboard_markup = types.InlineKeyboardMarkup(row_width=3)
+    for typ in typs:
+        keyboard_markup.add(types.InlineKeyboardButton(text=typ.upper(), callback_data=typ + cb))
+    await bot.send_message(query.from_user.id, 'Какой тип вы хотите выбрать?',
+                           reply_markup=keyboard_markup)
+    await query.answer(wtd[query.data.split('_')[0]], show_alert=True)
+
+
+@dp.callback_query_handler(Text(startswith=['рельсы', 'метизы', 'накладки', 'подкладки', 'РТИ', 'АРС',
+                                            'ЖБР', 'шпала', 'стрелки', 'клеммы прочие', 'хомуты к лесам']))
+async def answer_callback_handler(query: types.CallbackQuery):
+    cb = '_' + query.data
+    typ = query.data.split('_')[0]
+    keyboard_markup = types.InlineKeyboardMarkup(row_width=3)
+    for i in kinds[typ]:
+        keyboard_markup.add(types.InlineKeyboardButton(text=i, callback_data=i + cb))
+    await bot.send_message(query.from_user.id, 'Виберите вид',
+                           reply_markup=keyboard_markup)
+    await query.answer(query.data.split('_')[0], show_alert=True)
+
+
+@dp.callback_query_handler(Text(startswith=start_list))
+async def answer_cb_handler(query: types.CallbackQuery):
+    cb = '_' + query.data
+    typ = query.data.split('_')[1]
+    kb_markup = types.InlineKeyboardMarkup(row_width=3)
+    kb_markup.add(types.InlineKeyboardButton(text='нов', callback_data='нов' + cb))
+    if typ != 'РТИ':
+        if typ == 'рельсы' or typ == 'стрелки':
+            cond = ['хр', 'вс', 'бу00', 'бу01', 'бу1гр', 'бу2гр',
+                    'хрнд', 'бунд', 'бок', 'гнутг', 'гнутв']
+        else:
+            cond = ['хр', 'вс', 'бу']
+        for i in cond:
+            kb_markup.add(types.InlineKeyboardButton(text=i, callback_data=i + cb))
+    await bot.send_message(query.from_user.id, 'Состояние',
+                           reply_markup=kb_markup)
+    await query.answer(query.data.split('_')[0], show_alert=True)
+
+
+@dp.callback_query_handler(Text(startswith=['нов', 'хр', 'вс', 'бу', 'бок', 'гн',
+                                            '328', '143', '74', '366', '362', '487', '153']))
+async def location(query: types.CallbackQuery):
+    cb = '_' + query.data
+    kb = types.InlineKeyboardMarkup(row_width=2)
+    if cb.endswith('_check'):
+        cb = 'check' + '_'.join(cb.split('_')[0:-1]) + '_'
+        kb.add(types.InlineKeyboardButton(text='Автозаводском', callback_data=cb + 'райА'))
+        kb.add(types.InlineKeyboardButton(text='Центральном', callback_data=cb + 'райЦ'))
+    else:
+        kb.add(types.InlineKeyboardButton(text='Автозаводском', callback_data='райА' + cb))
+        kb.add(types.InlineKeyboardButton(text='Центральном', callback_data='райЦ' + cb))
+    await bot.send_message(query.from_user.id, 'На складе в ... районе',
+                           reply_markup=kb)
+    await query.answer(query.data.split('_')[0], show_alert=True)
+
+
+@dp.callback_query_handler(Text(startswith=['райА', 'райЦ']))
+async def amount_answer_cb_handler(query: types.CallbackQuery):
+    stock_types = {'райА': 'Автозаводский район',
+                   'райЦ': 'Центральный район'}
+    cb = '_' + query.data
+    kb = types.InlineKeyboardMarkup(row_width=2)
+    kb.add(types.InlineKeyboardButton(text='тонны', callback_data='т' + cb))
+    kb.add(types.InlineKeyboardButton(text='штуки', callback_data='шт' + cb))
+    await bot.send_message(query.from_user.id, 'Единицы измерения',
+                           reply_markup=kb)
+    await query.answer(stock_types[query.data.split('_')[0]], show_alert=True)
+
+
+@dp.callback_query_handler(Text(startswith=['т', 'шт']))
+async def the_end(query: types.CallbackQuery):
+    cb = query.data
+    global final_data
+    final_data = cb
+    await bot.send_message(query.from_user.id,
+                           f'Количество и примечания:\n'
+                           f'(Количество на первой, '
+                           f'примечания писать на следующей строке, '
+                           f'если их нет, написать только количество.)')
+    await query.answer(query.data.split('_')[0], show_alert=True)
+
+
+@dp.message_handler()
+async def final(message: types.Message):
+    txt = message.text.split('\n')
+    if len(txt) == 1:
+        txt.append(None)
+    cb = txt + final_data.split('_')
+    print(cb)
+    service = build('sheets', 'v4', credentials=credentials).spreadsheets().values()
+    result = service.get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
+                         range=SAMPLE_RANGE_NAME).execute()
+    sheet_data = result.get('values', [])
+    cb[3] = cb[3][-1]
+    for i in sheet_data:
+        if i and i[1] == cb[-3] and i[2] == cb[-4] and i[7] == cb[3]:
+            if cb[-1] == 'outgo':
+                x = sheet_data.index(i)
+                range_ = 'Лист1!A' + str(x + 1) + ':J' + str(x + 1)
+                if cb[1]:
+                    cb[1] = i[8] + cb[1] + '; '
+                arr = {'values': [[None, None, None,
+                                   float(i[3].replace(',', '.')) - float(cb[0].replace(',', '.')),
+                                   None, None, None, cb[3], cb[1],
+                                   dt.datetime.now().strftime('%H:%M %d.%m.%y')]]}
+                response = service.update(spreadsheetId=SAMPLE_SPREADSHEET_ID, range=range_,
+                                          valueInputOption='USER_ENTERED', body=arr).execute()
+                await bot.send_message(message.from_user.id, check(cb))
+                break
+            x = sheet_data.index(i)
+            range_ = 'Лист1!A' + str(x + 1) + ':J' + str(x + 1)
+            if cb[1]:
+                cb[1] = i[7] + cb[1] + '; '
+            arr = {'values': [[None, None, None,
+                               float(i[3].replace(',', '.')) + float(cb[0].replace(',', '.')),
+                               None, None, None, cb[3], cb[1],
+                               dt.datetime.now().strftime('%H:%M %d.%m.%y')]]}
+            response = service.update(spreadsheetId=SAMPLE_SPREADSHEET_ID, range=range_,
+                                      valueInputOption='USER_ENTERED', body=arr).execute()
+            await bot.send_message(message.from_user.id, check(cb))
+            break
+    else:
+        if cb[-1] == 'incoming':
+            flag = False
+            for i in range(len(sheet_data)):
+                if sheet_data[i][0] and sheet_data[i][0] != cb[-2] and flag:
+                    add_line(i - 2)
+                    range_ = 'Лист1!A' + str(i - 1) + ':J' + str(i - 1)
+                    arr = {'values': [[None, cb[-3], cb[-4],
+                                       float(cb[0]),
+                                       cb[2], None, None, cb[3], cb[1],
+                                       dt.datetime.now().strftime('%H:%M %d.%m.%y')]]}
+                    service.update(spreadsheetId=SAMPLE_SPREADSHEET_ID, range=range_,
+                                   valueInputOption='USER_ENTERED', body=arr).execute()
+                    break
+                if sheet_data[i][0].lower() == cb[-2].lower():
+                    flag = True
+        await message.answer(check(cb))
+
+
+@dp.callback_query_handler(Text(startswith='check_'))
+async def checking(query: types.CallbackQuery):
+    cb = query.data
+    fdt = cb.split('_')
+    fdt[-1] = fdt[-1][-1]
+    await bot.send_message(query.from_user.id, check(fdt))
+
+
+if __name__ == '__main__':
+    executor.start_polling(dp, skip_updates=True)
