@@ -122,7 +122,6 @@ async def final(message: types.Message):
     if len(txt) == 1:
         txt.append(None)
     cb = txt + final_data.split('_')
-    print(cb)
     service = build('sheets', 'v4', credentials=credentials).spreadsheets().values()
     result = service.get(spreadsheetId=SAMPLE_SPREADSHEET_ID,
                          range=SAMPLE_RANGE_NAME).execute()
